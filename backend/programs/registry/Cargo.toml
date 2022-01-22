@@ -1,0 +1,19 @@
+[package]
+name = "registry"
+version = "0.3.0"
+description = "Created with Anchor"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "registry"
+
+[features]
+no-entrypoint = []
+cpi = ["no-entrypoint"]
+
+[dependencies]
+anchor-lang = "0.4.4"
+anchor-spl = "0.4.4"
+lockup = { path = "../lockup", features = ["cpi"] }
+solana-program = "1.6.6"

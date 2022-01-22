@@ -1,0 +1,58 @@
+dist: bionic
+language: rust
+rust:
+  - stable
+env:
+  global:
+    - NODE_VERSION="v14.7.0"
+    - SOLANA_VERSION="v1.6.6"
+    - ANCHOR_VERSION="0.4.4"
+
+before_deploy:
+  - cargo install --git https://github.com/project-serum/anchor --tag v${ANCHOR_VERSION} anchor-cli --locked
+  - anchor build --verifiable
+  - echo "### SHA256 Checksums" > release_notes.md
+  - sha256sum target/deploy/lockup.so > lockup_binary.txt
+  - sha256sum target/idl/lockup.json > lockup_idl.txt
+  - sha256sum target/deploy/registry.so > registry_binary.txt
+  - sha256sum target/idl/registry.json > registry_idl.txt
+  - cat *.txt >> release_notes.md
+  - echo "" >> release_notes.md
+  - echo "Built with Anchor [v${ANCHOR_VERSION}](https://github.com/project-serum/anchor/releases/tag/v${ANCHOR_VERSION})." >> release_notes.md
+
+deploy:
+  provider: releases
+  edge: true
+  file:
+    - "target/deploy/lockup.so"
+    - "target/deploy/registry.so"
+    - "target/idl/lockup.json"
+    - "target/idl/registry.json"
+  release_notes_file: release_notes.md
+  skip_cleanup: true
+  on:
+    tags: true
+  api_key:
+    secure: "bUOLIYpmDzlEbtre7yrKoW5pjY1b/aEGtJ9K0MuSknEMCqohJAsdIz8m9aTgEZvsXRhdUBVpBL3rRbNEOe03Qo57s/Er27WQjjhg2aaxNoVyoTXdgl5eAVyFlFN2EsNPeZpWQr5KG6fvdJ+s/0v5pXA9Whx8DovKCDnCyL995wHSFP9kziB/PJIaSFOBeVLXePfUSHy8HN3RVSAQo1QZRsSwcv5/Y0vgBYZLZEpt7qcr4Z9VyUXYLfcPltJg7zvflhh41x+AKdQa3NJSpK0DOPPxaipEGtceUz43E3WrzsKcuv/e2xxf5gj8Ct8L2qwYqzh5byxLM3K+UP6GJwf4HruvtrUUU0w25GtXSjDyujPktELrDjQqcosMQ7+88V90bkpxSl7Kv4KMgpTslLYXuGl0+isT9KUfmnX+vyzp3nhzY67FRE9RyT1W6Ng+4AVI5Dz7r+3GazSyKLBJFCcmoZ6Oh1PGwjnolTHiPiSW6706O4yzSfE+qpaQLiZRlWpo5t8xDh4PAZ2kLyhu7EolZrQTToybepFoPWlV4LBQwtCuo8VoMBpSseJ4wBqv9W7BcSl8+keyhcFhhVHyZc2GvxLwYx2AA1BfQGJG8JbKt7fYbo0WjaPY002GFe08fKIdf/yYr4lHNG60XSc6jfeDioYtsDF47fbfk4nhTKGsGAQ="
+
+_defaults: &defaults
+  before_install:
+  - nvm install $NODE_VERSION
+  - npm install -g mocha
+  - npm install -g @project-serum/anchor@${ANCHOR_VERSION}
+  - npm install -g @project-serum/serum
+  - npm install -g @project-serum/common
+  - npm install -g @solana/spl-token
+  - sudo apt-get install -y pkg-config build-essential libudev-dev
+  - sh -c "$(curl -sSfL https://release.solana.com/${SOLANA_VERSION}/install)"
+  - export PATH="/home/travis/.local/share/solana/install/active_release/bin:$PATH"
+  - export NODE_PATH="/home/travis/.nvm/versions/node/${NODE_VERSION}/lib/node_modules/:${NODE_PATH}"
+  - yes | solana-keygen new
+  - yarn
+
+jobs:
+  include:
+    - <<: *defaults
+      name: Runs the tests
+      script:
+        - yarn test
